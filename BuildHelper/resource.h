@@ -13,6 +13,7 @@
 #define IDC_BTN_BUILD                   1004
 #define IDC_BTN_QUIT                    1005
 #define IDC_FOLDER_BRO                  1006
+#define IDC_STATIC_EMAIL                1007
 #define IDC_COM_VSVER                   1008
 
 // Next default values for new objects
@@ -21,7 +22,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        201
 #define _APS_NEXT_COMMAND_VALUE         32775
-#define _APS_NEXT_CONTROL_VALUE         1007
+#define _APS_NEXT_CONTROL_VALUE         1008
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

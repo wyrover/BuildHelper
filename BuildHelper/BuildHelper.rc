@@ -37,7 +37,7 @@ BEGIN
     LTEXT           "配置:",IDC_STATIC,181,23,20,8
     COMBOBOX        IDC_COM_VS_PLATFORM,121,20,48,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
     COMBOBOX        IDC_COM_CONFIG,206,20,48,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    EDITTEXT        IDC_EDIT_OUTPUT,5,39,203,135,ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY,WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_OUTPUT,5,39,203,135,ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL | WS_HSCROLL,WS_EX_CLIENTEDGE
     DEFPUSHBUTTON   "编译",IDC_BTN_BUILD,213,41,44,14
     PUSHBUTTON      "退出",IDC_BTN_QUIT,213,62,44,14
     PUSHBUTTON      "...",IDC_FOLDER_BRO,243,1,15,14
@@ -65,26 +65,27 @@ END
 
 
 /////////////////////////////////////////////////////////////////////////////
-// 英语(美国) resources
+// 中文(简体，中国) resources
 
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-#pragma code_page(1252)
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
+#pragma code_page(936)
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOG 0, 0, 187, 102
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_ABOUTBOX DIALOGEX 0, 0, 187, 102
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About"
-FONT 8, "MS Shell Dlg"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,130,81,50,14
-    CTEXT           "BuildHelper Application v1.0\n\n(c) Copyright 2013",IDC_STATIC,25,57,78,32
-    ICON            IDR_MAINFRAME,IDC_STATIC,55,26,18,20
+    CTEXT           "VS工程小助手 v1.0\n\n(c) Copyright 2013\n\n Write By red_code",IDC_STATIC,25,18,78,47
+    ICON            IDR_MAINFRAME,IDC_STATIC,139,31,20,20
     GROUPBOX        "",IDC_STATIC,7,7,115,88
+    CTEXT           "red_code@163.com",IDC_STATIC_EMAIL,19,72,96,8
 END
 
 
@@ -106,6 +107,16 @@ BEGIN
 END
 #endif    // APSTUDIO_INVOKED
 
+#endif    // 中文(简体，中国) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// 英语(美国) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////

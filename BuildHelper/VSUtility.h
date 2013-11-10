@@ -34,7 +34,10 @@ public:
 
     CVSUtility()
     {
-    
+        m_hBuildThread = NULL;
+        m_hWndRedirect = NULL;
+        m_buildConfig = CONFIG_DEBUG;
+        m_buildPlatForm = PLATFORM_X86;
     }
     
     virtual ~CVSUtility()
@@ -127,36 +130,102 @@ public:
     
     void Build()
     {
+        DWORD dwExitCode = 0;
+        GetExitCodeThread( m_hBuildThread, &dwExitCode );
+        if ( STILL_ACTIVE == dwExitCode )
+        {
+            return ;
+        }
+        m_hBuildThread = ( HANDLE )_beginthreadex( NULL, 0, BuildThread, this, 0, 0 );
+    }
+    
+    static unsigned __stdcall BuildThread( LPVOID lpParam )
+    {
+        CVSUtility* pThis = ( CVSUtility* )lpParam;
+        if ( NULL != pThis )
+        {
+            pThis->_Build();
+        }
+        return 0;
+    }
+    
+    void _Build()
+    {
         CString sBatPath = CreateBatFile();
-        STARTUPINFO si;
+        
+        HANDLE hChildStd_OUT_Rd = NULL;
+        HANDLE hChildStd_OUT_Wr = NULL;
+        SECURITY_ATTRIBUTES saAttr;
+        // Set the bInheritHandle flag so pipe handles are inherited.
+        saAttr.nLength = sizeof( SECURITY_ATTRIBUTES );
+        saAttr.bInheritHandle = TRUE;
+        saAttr.lpSecurityDescriptor = NULL;
+        // Create a pipe for the child process's STDOUT.
+        
+        if ( ! CreatePipe( &hChildStd_OUT_Rd, &hChildStd_OUT_Wr, &saAttr, 0 ) )
+        {
+            return ;
+        }
+        
+        // Ensure the read handle to the pipe for STDOUT is not inherited.
+        if ( ! SetHandleInformation( hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0 ) )
+            return ;
+            
+        STARTUPINFO siStartInfo;
+        ZeroMemory( &siStartInfo, sizeof( STARTUPINFO ) );
+        siStartInfo.cb = sizeof( STARTUPINFO );
+        siStartInfo.hStdError = hChildStd_OUT_Wr;
+        siStartInfo.hStdOutput = hChildStd_OUT_Wr;
+        siStartInfo.dwFlags |= STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+        siStartInfo.wShowWindow = SW_HIDE;
         PROCESS_INFORMATION pi;
-        
-        ZeroMemory( &si, sizeof( si ) );
-        si.cb = sizeof( si );
         ZeroMemory( &pi, sizeof( pi ) );
-        
         // Start the child process.
         if ( !CreateProcess( NULL,  // No module name (use command line)
                              sBatPath.GetBuffer(),        // Command line
                              NULL,           // Process handle not inheritable
                              NULL,           // Thread handle not inheritable
-                             FALSE,          // Set handle inheritance to FALSE
+                             TRUE,          // Set handle inheritance to FALSE
                              0,              // No creation flags
                              NULL,           // Use parent's environment block
                              NULL,           // Use parent's starting directory
-                             &si,            // Pointer to STARTUPINFO structure
+                             &siStartInfo,            // Pointer to STARTUPINFO structure
                              &pi )           // Pointer to PROCESS_INFORMATION structure
            )
         {
             return;
         }
-        
-        // Wait until child process exits.
-        WaitForSingleObject( pi.hProcess, INFINITE );
-        
         // Close process and thread handles.
         CloseHandle( pi.hProcess );
         CloseHandle( pi.hThread );
+        CloseHandle( hChildStd_OUT_Wr );		// 必须关闭,否则会导致主进程ReadFile卡住
+        
+        const int pipeBufLen = 4096;
+        CHAR pipeBuf[pipeBufLen] = {0};
+        DWORD dwbytesRead = 0;
+        CString sOut;
+        BOOL bSuccess = FALSE;
+        while ( TRUE )
+        {
+            bSuccess = ReadFile( hChildStd_OUT_Rd, pipeBuf, pipeBufLen, &dwbytesRead, NULL );
+            if ( !bSuccess || dwbytesRead == 0 )
+            {
+                break;
+            }
+            USES_CONVERSION;
+            sOut.Append( A2W( pipeBuf ) );
+            memset( pipeBuf, 0, pipeBufLen );
+            SetWindowText( m_hWndRedirect, sOut );
+        }
+        
+        // Wait until child process exits.
+        WaitForSingleObject( pi.hProcess, INFINITE );
+    }
+    
+    // 重定向窗口句柄
+    void SetRedirectHwnd( HWND hWnd )
+    {
+        m_hWndRedirect = hWnd;
     }
     
     void SetBuildPlatForm( BUILD_PLATFORM buildPlatForm )
@@ -237,4 +306,6 @@ private:
     CString m_sVSVer;
     CString m_sProjectDir;
     CString m_sProjectName;
+    HWND m_hWndRedirect;
+    HANDLE m_hBuildThread;
 };

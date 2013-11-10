@@ -35,6 +35,9 @@
     <ClInclude Include="VSUtility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CAboutDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BuildHelper.rc">

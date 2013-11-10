@@ -4,6 +4,7 @@
 
 #pragma once
 #include "VSUtility.h"
+#include "CAboutDlg.h"
 
 class CMainDlg : public CDialogImpl<CMainDlg>
 {
@@ -64,6 +65,10 @@ public:
         editProjectDir.GetWindowText( sProDir );
         m_vsUtility.SetProjectDir( sProDir );
         
+        CEdit editOutput = GetDlgItem( IDC_EDIT_OUTPUT );
+        editOutput.SetWindowText( _T( "’˝‘⁄±‡“Î,«Î…‘∫Ú..." ) );
+        m_vsUtility.SetRedirectHwnd( editOutput.m_hWnd );
+        
         m_vsUtility.Build();
         
         return 0;
@@ -86,8 +91,8 @@ public:
     
     LRESULT OnAppAbout( WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/ )
     {
-        CSimpleDialog<IDD_ABOUTBOX, FALSE> dlg;
-        dlg.DoModal();
+        CAboutDlg aboutDlg;
+        aboutDlg.DoModal();
         return 0;
     }
     
