@@ -28,6 +28,13 @@ enum BUILD_CONFIG
     CONFIG_RELEASE
 };
 
+enum COMMAND_TYPE
+{
+    COMMAND_BUILD,
+    COMMAND_REBUILD,
+    COMMAND_CLEAN
+};
+
 class CVSUtility : public Iterator<VSITEM>
 {
 public:
@@ -38,6 +45,7 @@ public:
         m_hWndRedirect = NULL;
         m_buildConfig = CONFIG_DEBUG;
         m_buildPlatForm = PLATFORM_X86;
+        m_cmdType = COMMAND_BUILD;
     }
     
     virtual ~CVSUtility()
@@ -128,7 +136,12 @@ public:
         m_vsItemMap.clear();
     }
     
-    void Build()
+    void SetCmdType( COMMAND_TYPE cmdType )
+    {
+        m_cmdType = cmdType;
+    }
+    
+    void HandleRequest()
     {
         DWORD dwExitCode = 0;
         GetExitCodeThread( m_hBuildThread, &dwExitCode );
@@ -136,24 +149,31 @@ public:
         {
             return ;
         }
-        m_hBuildThread = ( HANDLE )_beginthreadex( NULL, 0, BuildThread, this, 0, 0 );
+        m_hBuildThread = ( HANDLE )_beginthreadex( NULL, 0, HandleRequestThread, this, 0, 0 );
     }
     
-    static unsigned __stdcall BuildThread( LPVOID lpParam )
+    static unsigned __stdcall HandleRequestThread( LPVOID lpParam )
     {
         CVSUtility* pThis = ( CVSUtility* )lpParam;
         if ( NULL != pThis )
         {
-            pThis->_Build();
+            pThis->_HandleRequest( pThis->m_cmdType );
         }
         return 0;
     }
     
-    void _Build()
+    void _HandleRequest( COMMAND_TYPE cmdType )
     {
-        CString sBatPath = CreateBatFile();
-        
-        HANDLE hChildStd_OUT_Rd = NULL;
+        HANDLE hReadPipe = NULL;
+        CString sBatPath = CreateBatFile( cmdType );
+        if ( CreateChildProcess( sBatPath.GetBuffer(), hReadPipe ) )
+        {
+            ReadPipeData( hReadPipe );
+        }
+    }
+    
+    BOOL CreateChildProcess( LPTSTR lpCmd, HANDLE& hReadPipe )
+    {
         HANDLE hChildStd_OUT_Wr = NULL;
         SECURITY_ATTRIBUTES saAttr;
         // Set the bInheritHandle flag so pipe handles are inherited.
@@ -162,14 +182,14 @@ public:
         saAttr.lpSecurityDescriptor = NULL;
         // Create a pipe for the child process's STDOUT.
         
-        if ( ! CreatePipe( &hChildStd_OUT_Rd, &hChildStd_OUT_Wr, &saAttr, 0 ) )
+        if ( ! CreatePipe( &hReadPipe, &hChildStd_OUT_Wr, &saAttr, 0 ) )
         {
-            return ;
+            return FALSE;
         }
         
         // Ensure the read handle to the pipe for STDOUT is not inherited.
-        if ( ! SetHandleInformation( hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0 ) )
-            return ;
+        if ( ! SetHandleInformation( hReadPipe, HANDLE_FLAG_INHERIT, 0 ) )
+            return FALSE;
             
         STARTUPINFO siStartInfo;
         ZeroMemory( &siStartInfo, sizeof( STARTUPINFO ) );
@@ -182,7 +202,7 @@ public:
         ZeroMemory( &pi, sizeof( pi ) );
         // Start the child process.
         if ( !CreateProcess( NULL,  // No module name (use command line)
-                             sBatPath.GetBuffer(),        // Command line
+                             lpCmd,        // Command line
                              NULL,           // Process handle not inheritable
                              NULL,           // Thread handle not inheritable
                              TRUE,          // Set handle inheritance to FALSE
@@ -193,13 +213,17 @@ public:
                              &pi )           // Pointer to PROCESS_INFORMATION structure
            )
         {
-            return;
+            return FALSE;
         }
         // Close process and thread handles.
         CloseHandle( pi.hProcess );
         CloseHandle( pi.hThread );
         CloseHandle( hChildStd_OUT_Wr );		// 必须关闭,否则会导致主进程ReadFile卡住
-        
+        return TRUE;
+    }
+    
+    void ReadPipeData( HANDLE hReadPipe )
+    {
         const int pipeBufLen = 4096;
         CHAR pipeBuf[pipeBufLen] = {0};
         DWORD dwbytesRead = 0;
@@ -207,7 +231,7 @@ public:
         BOOL bSuccess = FALSE;
         while ( TRUE )
         {
-            bSuccess = ReadFile( hChildStd_OUT_Rd, pipeBuf, pipeBufLen, &dwbytesRead, NULL );
+            bSuccess = ReadFile( hReadPipe, pipeBuf, pipeBufLen, &dwbytesRead, NULL );
             if ( !bSuccess || dwbytesRead == 0 )
             {
                 break;
@@ -217,9 +241,6 @@ public:
             memset( pipeBuf, 0, pipeBufLen );
             SetWindowText( m_hWndRedirect, sOut );
         }
-        
-        // Wait until child process exits.
-        WaitForSingleObject( pi.hProcess, INFINITE );
     }
     
     // 重定向窗口句柄
@@ -269,8 +290,43 @@ protected:
         return _T( "" );
     }
     
-    CString CreateBatFile()
+    CString GetPlatformToolset( CString sVer )
     {
+        CString sPlatToolset;
+        if ( 0 == sVer.CompareNoCase( _T( "11.0" ) ) )
+        {
+            sPlatToolset = _T( ";PlatformToolset=v110" );
+        }
+        else if ( 0 == sVer.CompareNoCase( _T( "10.0" ) ) )
+        {
+            sPlatToolset = _T( ";PlatformToolset=v100" );
+        }
+        return sPlatToolset;
+    }
+    
+    CString CreateBatFile( COMMAND_TYPE cmdType )
+    {
+        CString sCmd;
+        switch ( cmdType )
+        {
+            case COMMAND_BUILD:
+            {
+                sCmd = _T( " /t:Build" );
+                break;
+            }
+            case COMMAND_REBUILD:
+            {
+                sCmd = _T( " /t:ReBuild" );
+                break;
+            }
+            case COMMAND_CLEAN:
+            {
+                sCmd = _T( " /t:Clean" );
+                break;
+            }
+            default:
+                break;
+        }
         CString sVsBatPath = GetVsInstallPath( m_sVSVer ) + _T( "vcvarsall.bat" );
         CString sBatContent;
         sBatContent.Format( _T( "%s" ), _T( "CALL" ) );
@@ -285,7 +341,13 @@ protected:
         {
             sBatContent.AppendFormat( _T( " %s" ), _T( "/p:Configuration=Release" ) );
         }
+        CString sPlatformToolset = GetPlatformToolset( m_sVSVer );
+        if ( !sPlatformToolset.IsEmpty() )
+        {
+            sBatContent.Append( sPlatformToolset );
+        }
         sBatContent.Append( _T( " /m" ) );
+        sBatContent.Append( sCmd );
         
         USES_CONVERSION;
         CString sBatFileName;
@@ -308,4 +370,5 @@ private:
     CString m_sProjectName;
     HWND m_hWndRedirect;
     HANDLE m_hBuildThread;
+    COMMAND_TYPE m_cmdType;
 };

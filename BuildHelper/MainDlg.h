@@ -20,6 +20,9 @@ public:
     COMMAND_ID_HANDLER( ID_APP_ABOUT, OnAppAbout )
     COMMAND_ID_HANDLER( IDC_BTN_QUIT, OnCancel )
     COMMAND_ID_HANDLER( IDCANCEL, OnCancel )
+    COMMAND_ID_HANDLER( IDC_BTN_REBUILD, OnRebuild )
+    COMMAND_ID_HANDLER( IDC_BTN_CLEAN, OnClean )
+    COMMAND_ID_HANDLER( IDC_FOLDER_BRO, OnFolderBrowser )
     END_MSG_MAP()
     
     // Handler prototypes (uncomment arguments if needed):
@@ -48,6 +51,23 @@ public:
     
     LRESULT OnBuild( WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/ )
     {
+        HandleRequest( COMMAND_BUILD );
+        return 0;
+    }
+    
+    LRESULT OnRebuild( WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/ )
+    {
+        HandleRequest( COMMAND_REBUILD );
+        return 0;
+    }
+    
+    LRESULT OnClean( WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/ )
+    {
+        HandleRequest( COMMAND_CLEAN );
+        return 0;
+    }
+    void HandleRequest( COMMAND_TYPE cmdType )
+    {
         CComboBox comPlatForm = GetDlgItem( IDC_COM_VS_PLATFORM );
         BUILD_PLATFORM buildPlatForm = ( BUILD_PLATFORM )comPlatForm.GetItemData( comPlatForm.GetCurSel() );
         m_vsUtility.SetBuildPlatForm( buildPlatForm );
@@ -66,12 +86,11 @@ public:
         m_vsUtility.SetProjectDir( sProDir );
         
         CEdit editOutput = GetDlgItem( IDC_EDIT_OUTPUT );
-        editOutput.SetWindowText( _T( "正在编译,请稍候..." ) );
+        editOutput.SetWindowText( _T( "正在执行命令,请稍候..." ) );
         m_vsUtility.SetRedirectHwnd( editOutput.m_hWnd );
         
-        m_vsUtility.Build();
-        
-        return 0;
+        m_vsUtility.SetCmdType( cmdType );
+        m_vsUtility.HandleRequest();
     }
     
     LRESULT OnInitDialog( UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/ )
@@ -106,6 +125,12 @@ public:
     LRESULT OnCancel( WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/ )
     {
         EndDialog( wID );
+        return 0;
+    }
+    
+    LRESULT OnFolderBrowser( WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/ )
+    {
+        MessageBox( _T( "直接拖动\"sln\"或者\"vcxproj\"类型的文件到窗口,不比鼠标点半天快吗?" ) );
         return 0;
     }
     

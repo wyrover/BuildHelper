@@ -14,7 +14,9 @@
 #define IDC_BTN_QUIT                    1005
 #define IDC_FOLDER_BRO                  1006
 #define IDC_STATIC_EMAIL                1007
+#define IDC_BTN_REBUILD                 1007
 #define IDC_COM_VSVER                   1008
+#define IDC_BTN_CLEAN                   1009
 
 // Next default values for new objects
 // 
