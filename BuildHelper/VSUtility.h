@@ -170,6 +170,8 @@ public:
         {
             ReadPipeData( hReadPipe );
         }
+        sBatPath.ReleaseBuffer();
+        DeleteFile( sBatPath );
     }
     
     BOOL CreateChildProcess( LPTSTR lpCmd, HANDLE& hReadPipe )
@@ -264,7 +266,7 @@ public:
         m_sVSVer = sVer;
     }
     
-    void SetProjectDir( CString sProDir )
+    BOOL SetProjectDir( CString sProDir )
     {
         int pos = sProDir.ReverseFind( _T( '\\' ) );
         if ( -1 != pos )
@@ -273,6 +275,7 @@ public:
             m_sProjectDir = sProDir;
             m_sProjectDir.Truncate( pos + 1 );
         }
+        return PathFileExists( m_sProjectDir );
     }
     
 protected:
@@ -354,9 +357,13 @@ protected:
         sBatFileName.Format( _T( "%s%s" ), m_sProjectDir, _T( "BUILD.bat" ) );
         FILE* pFile = NULL;
         _tfopen_s( &pFile, sBatFileName, _T( "wb" ) );
-        fwrite( W2A( sBatContent ), sBatContent.GetLength(), 1, pFile );
-        fflush( pFile );
-        fclose( pFile );
+        if ( NULL != pFile )
+        {
+            fwrite( W2A( sBatContent ), sBatContent.GetLength(), 1, pFile );
+            fflush( pFile );
+            fclose( pFile );
+        }
+        
         return sBatFileName;
     }
 private:

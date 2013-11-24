@@ -68,6 +68,10 @@ public:
     }
     void HandleRequest( COMMAND_TYPE cmdType )
     {
+        CEdit editOutput = GetDlgItem( IDC_EDIT_OUTPUT );
+        editOutput.SetWindowText( _T( "正在执行命令,请稍候..." ) );
+        m_vsUtility.SetRedirectHwnd( editOutput.m_hWnd );
+        
         CComboBox comPlatForm = GetDlgItem( IDC_COM_VS_PLATFORM );
         BUILD_PLATFORM buildPlatForm = ( BUILD_PLATFORM )comPlatForm.GetItemData( comPlatForm.GetCurSel() );
         m_vsUtility.SetBuildPlatForm( buildPlatForm );
@@ -83,11 +87,11 @@ public:
         CEdit editProjectDir = GetDlgItem( IDC_EDIT_VS_FOLDER );
         CString sProDir;
         editProjectDir.GetWindowText( sProDir );
-        m_vsUtility.SetProjectDir( sProDir );
-        
-        CEdit editOutput = GetDlgItem( IDC_EDIT_OUTPUT );
-        editOutput.SetWindowText( _T( "正在执行命令,请稍候..." ) );
-        m_vsUtility.SetRedirectHwnd( editOutput.m_hWnd );
+        if ( !m_vsUtility.SetProjectDir( sProDir ) )
+        {
+            editOutput.SetWindowText( _T( "工程路径错误" ) );
+            return ;
+        }
         
         m_vsUtility.SetCmdType( cmdType );
         m_vsUtility.HandleRequest();
@@ -130,7 +134,7 @@ public:
     
     LRESULT OnFolderBrowser( WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/ )
     {
-        MessageBox( _T( "直接拖动\"sln\"或者\"vcxproj\"类型的文件到窗口,不比鼠标点半天快吗?" ) );
+        MessageBox( _T( "亲，直接拖动\"sln\"或者\"vcxproj\"文件到窗口,比鼠标点半天要省事的多呢" ) );
         return 0;
     }
     
